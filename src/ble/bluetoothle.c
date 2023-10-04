@@ -94,12 +94,20 @@ static void on_ble_disconnect(struct bt_conn *conn, uint8_t reason)
 *******************************************************************************/
 int ble_adv_start(void)
 {
-	int errorcode = bt_le_adv_start(BT_LE_ADV_CONN, ADV_DATA, ARRAY_SIZE(ADV_DATA), NULL, 0);
+    struct bt_le_adv_param adv_param =
+    {
+        .id = 0,
+        .sid = 0,
+        .options = BT_LE_ADV_OPT_NONE | BT_LE_ADV_OPT_USE_NAME,
+        .interval_min = 0x0020, // 20ms
+        .interval_max = 0x0030, // 30ms
+    };
+	int errorcode = bt_le_adv_start(&adv_param, ADV_DATA, ARRAY_SIZE(ADV_DATA), NULL, 0);
     if (errorcode) {
         LOG_ERR("Couldn't start advertising (err = %d)", errorcode);
         return errorcode;
     }
-    LOG_INF("Advertising 0fully started\n");
+    LOG_INF("Advertising fully started\n");
     if(ble_cb_app.ble_adv_started_cb != NULL)
     {
         ble_cb_app.ble_adv_started_cb();
