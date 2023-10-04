@@ -40,6 +40,7 @@ LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 /******************************************************************************
 * Module Variable Definitions
 *******************************************************************************/
+static const struct device *gpio0_device = DEVICE_DT_GET(DT_NODELABEL(gpio0));
 
 /******************************************************************************
 * Function Prototypes
@@ -62,6 +63,21 @@ int main(void)
         return -1;
     }
 
+    // Setup an output IO for testing
+    if (!device_is_ready(gpio0_device))
+    {
+        LOG_ERR("GPIO0 device is not ready");
+        return -1;
+    }
+    gpio_pin_configure(gpio0_device, 13, GPIO_OUTPUT); 
+    int status = gpio_pin_set_raw(gpio0_device, 13, 1);
+    if (status != 0)
+    {
+        LOG_ERR("GPIO0 set pin failed");
+        return -1;
+    }
+    k_sleep(K_MSEC(100));
+    status = gpio_pin_set_raw(gpio0_device, 13, 0);
 	return 0;
 }
 
