@@ -60,6 +60,5 @@ int main(void)
 void ble_app_init(void)
 {
     ble_init(NULL);
-    ble_set_adv_name("ITACHI-BLE");
     ble_adv_start();
 }

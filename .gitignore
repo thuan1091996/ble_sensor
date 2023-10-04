@@ -1,7 +1,8 @@
 # editors
 *.swp
 *~
-
+/.cache/
+/temp/
 # build
 /build*/
-/.cache/
+

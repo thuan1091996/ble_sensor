@@ -34,11 +34,12 @@
 #define MODULE_LOG_LEVEL	        LOG_LEVEL_INF
 LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 
-#define ADV_DEFAULT_DEVICE_NAME     "nRF52-BLE"
+#define ADV_DEFAULT_DEVICE_NAME     CONFIG_BT_DEVICE_NAME
 #define ADV_PACKET_MAX_LEN          (29)
 #define ADV_NAME_MAX_LEN            (29)
-#define BLE_CONFIG_ADV_NAME         (1)     /* 1 -> Include ADV name in the ADC packet*/
 
+
+#define CONF_ADV_NAME_APPEND_MAC_ADDR   (1) // 1: include mac address in adv name, 0: not include
 
 /******************************************************************************
 * Module Typedefs
@@ -50,7 +51,6 @@ LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 static char ADV_NAME[ADV_NAME_MAX_LEN] = ADV_DEFAULT_DEVICE_NAME;
 static struct bt_data ADV_DATA[] = 
 {
-    BT_DATA_BYTES(BT_DATA_UUID128_ALL,  BT_CUSTOM_SERV1_UUID),   /* Custom service UUID */
     BT_DATA(BT_DATA_NAME_COMPLETE, ADV_NAME, sizeof(ADV_DEFAULT_DEVICE_NAME))  /* Device name */
 };
 
@@ -98,7 +98,7 @@ int ble_adv_start(void)
     {
         .id = 0,
         .sid = 0,
-        .options = BT_LE_ADV_OPT_NONE | BT_LE_ADV_OPT_USE_NAME,
+        .options = BT_LE_ADV_OPT_NONE | BT_LE_ADV_OPT_USE_IDENTITY,
         .interval_min = 0x0020, // 20ms
         .interval_max = 0x0030, // 30ms
     };
@@ -159,6 +159,16 @@ int ble_init(ble_callback_t* p_app_cb)
         return errorcode;
     }
     LOG_INF("BLE init succesfully");
+
+#if (CONF_ADV_NAME_APPEND_MAC_ADDR != 0)
+    // Get the BLE address base on NRF_FICR->DEVICEADDR
+    char adv_device_name[ADV_NAME_MAX_LEN] = {0};
+    // Append 4 last digits of mac address to device name 
+    sprintf(adv_device_name, "%s%02X%02X", ADV_DEFAULT_DEVICE_NAME, 
+                    (uint8_t)( (NRF_FICR->DEVICEADDR[0] >> 8) & 0xFF), (uint8_t)(NRF_FICR->DEVICEADDR[0] & 0xFF));
+    ble_set_adv_name(adv_device_name);
+#endif // End of CONF_ADV_NAME_APPEND_MAC_ADDR
+
     return 0;
 }
 
