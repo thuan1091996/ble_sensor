@@ -24,6 +24,7 @@
 *******************************************************************************/
 #define SAMPLING_RATE_MS        (50)
 
+#define CONF_TEST_COUNTER       (1) // 1: test counter by toggle IO in counter callback, 0: not test counter
 /******************************************************************************
 * Module Preprocessor Macros
 *******************************************************************************/
@@ -141,6 +142,7 @@ const struct device *sampling_counter = DEVICE_DT_GET(SAMPLE_COUNTER_DEVICE);
 
 void sampling_counter_cb(const struct device *dev, void *user_data)
 {
+#if (CONF_TEST_COUNTER != 0)
     int status = gpio_pin_set_raw(gpio0_device, 13, 1);
     if (status != 0)
     {
@@ -149,6 +151,22 @@ void sampling_counter_cb(const struct device *dev, void *user_data)
     }
     LOG_WRN("Counter callback %u ms", k_uptime_get_32());
     status = gpio_pin_set_raw(gpio0_device, 13, 0);
+#else /* !(CONF_TEST_COUNTER != 0) */
+    static uint32_t frame_cnt = 0;
+    frame_cnt++;
+    uint8_t sensor_data[20] = {0};
+    uint16_t sensor_data_len = 0;
+    if (sensor_sampling(sensor_data, &sensor_data_len) != 0)
+    {
+        LOG_ERR("Sensor sampling failed");
+        return;
+    }
+    if (sensor_data_send_ble(sensor_data, &sensor_data_len, frame_cnt) != 0)
+    {
+        LOG_ERR("Sensor data send BLE failed");
+        return;
+    }
+#endif /* End of (CONF_TEST_COUNTER != 0) */
 }
 /*
  * @brief Sampling counter init
