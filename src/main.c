@@ -100,6 +100,41 @@ int ble_app_init(void)
     }
     return 0;
 }
+// Sensor stuff
+/*
+ * @brief: Sensor sampling
+ * 
+ * @param (out) p_data: pointer to store new data
+ * @param (out) p_length: pointer to store length of new data
+ * @return int: 0 on success or negative code otherwise
+ */
+int sensor_sampling(uint8_t* p_data, uint16_t* p_length)
+{
+    int status = 0;
+    __ASSERT_NO_MSG(p_data != NULL);
+    __ASSERT_NO_MSG(p_length != NULL);
+    //TODO: Fill in the sensor data & update the length
+    *p_length = 12;
+    return status;
+}
+
+/*
+ * @brief: Send sensor data via BLE
+ * 
+ * @param p_data: pointer to the data to send 
+ * @param p_length: pointer to the length of the data to send
+ * @param frame_cnt: frame count
+ * @return int: 0 on success or negative code otherwise
+ */
+int sensor_data_send_ble(uint8_t* p_data, uint16_t* p_length, uint32_t frame_cnt)
+{
+    __ASSERT_NO_MSG(p_data != NULL);
+    __ASSERT_NO_MSG(p_length != NULL);
+    uint8_t send_payload[16] = {0}; // 4B frame count + 12B sensor data
+    memcpy(send_payload, &frame_cnt, sizeof(frame_cnt));
+    memcpy(send_payload + sizeof(frame_cnt), p_data, *p_length);
+    return ble_set_custom_adv_payload(send_payload, sizeof(frame_cnt) + *p_length);
+}
 
 // COUNTER STUFF
 const struct device *sampling_counter = DEVICE_DT_GET(SAMPLE_COUNTER_DEVICE);
