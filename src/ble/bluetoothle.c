@@ -35,8 +35,10 @@
 LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 
 #define ADV_DEFAULT_DEVICE_NAME     CONFIG_BT_DEVICE_NAME
-#define ADV_PACKET_MAX_LEN          (29)
-#define ADV_NAME_MAX_LEN            (29)
+#define ADV_CUSTOM_DATA_TYPE        BT_DATA_MANUFACTURER_DATA
+#define ADV_PACKET_MAX_LEN          (31)
+#define ADV_CUSTOM_PAYLOAD_LEN      (16) // 4B frame counter + 12B sensor data
+#define ADV_NAME_MAX_LEN            (ADV_PACKET_MAX_LEN - (ADV_CUSTOM_PAYLOAD_LEN + 2) - 2) // 31B - (16+2)B CUSTOMPAYLOAD - 1B type - 1B length -  = 11B
 
 
 #define CONF_ADV_NAME_APPEND_MAC_ADDR   (1) // 1: include mac address in adv name, 0: not include
@@ -49,9 +51,12 @@ LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 * Module Variable Definitions
 *******************************************************************************/
 static char ADV_NAME[ADV_NAME_MAX_LEN] = ADV_DEFAULT_DEVICE_NAME;
+uint8_t ADV_CUSTOM_PAYLOAD[ADV_CUSTOM_PAYLOAD_LEN] = {0};
+
 static struct bt_data ADV_DATA[] = 
 {
-    BT_DATA(BT_DATA_NAME_COMPLETE, ADV_NAME, sizeof(ADV_DEFAULT_DEVICE_NAME))  /* Device name */
+    BT_DATA(BT_DATA_NAME_COMPLETE, ADV_NAME, sizeof(ADV_DEFAULT_DEVICE_NAME)),      /* Device name */
+    BT_DATA(ADV_CUSTOM_DATA_TYPE, ADV_CUSTOM_PAYLOAD, ADV_CUSTOM_PAYLOAD_LEN)  /* Custom payload */
 };
 
 /* Bluetooth applicatiton callbacks */
@@ -192,5 +197,34 @@ int ble_set_adv_name(char* p_name)
         }
     }
     LOG_ERR("Couldn't find BT_DATA_NAME_COMPLETE in ADV_DATA");
+    return -1;
+}
+
+/* 
+ * @brief: Set the custom payload of BLE advertising packet with given ADV type is ADV_CUSTOM_DATA_TYPE
+ * 
+ * @param p_data: pointer to the data
+ * @param len: length of the data
+ * @return int: 0 on success or negative code otherwise
+ */
+int ble_set_custom_adv_payload(uint8_t* p_data, uint8_t len)
+{   
+    __ASSERT_NO_MSG(p_data != NULL);
+    if(len > ADV_CUSTOM_PAYLOAD_LEN)
+    {
+        LOG_ERR("BLE custom payload too long, max length is %d data will be truncated", ADV_CUSTOM_PAYLOAD_LEN);
+    }
+    // Find index of ADV_CUSTOM_DATA_TYPE in ADV_DATA[]
+    for(int index = 0; index < ARRAY_SIZE(ADV_DATA); index++)
+    {
+        if(ADV_DATA[index].type == ADV_CUSTOM_DATA_TYPE)
+        {
+            memset((void *)ADV_DATA[index].data, 0, ADV_DATA[index].data_len);
+            ADV_DATA[index].data_len = len;
+            memcpy((void *)ADV_DATA[index].data, p_data, len);
+            return bt_le_adv_update_data(ADV_DATA, ARRAY_SIZE(ADV_DATA), NULL, 0);
+        }
+    }
+    LOG_ERR("Couldn't find ADV_CUSTOM_DATA_TYPE in ADV_DATA");
     return -1;
 }
