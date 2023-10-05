@@ -67,6 +67,63 @@ int ble_app_init(void)
     return 0;
 }
 // Sensor stuff
+
+#if (CONFIG_DT_HAS_ST_LSM6DSL_ENABLED != 0)
+#include <zephyr/device.h>
+#include <zephyr/drivers/sensor.h>
+#else /* !(CONFIG_DT_HAS_ST_LSM6DSL_ENABLED != 0) */
+#error "No enabled LSM6DSL sensor node"
+#endif /* End of (CONFIG_DT_HAS_ST_LSM6DSL_ENABLED != 0) */
+
+const struct device *const lsm6dsl_dev = DEVICE_DT_GET_ONE(st_lsm6dsl);
+// Possible ODR of LSM6DSL
+typedef enum
+{
+    LSM6DSL_ODR_12_5HZ  = 12,
+    LSM6DSL_ODR_26HZ    = 26,
+    LSM6DSL_ODR_52HZ    = 52,
+    LSM6DSL_ODR_104HZ   = 104,
+    LSM6DSL_ODR_208HZ   = 208,
+    LSM6DSL_ODR_416HZ   = 416,
+    LSM6DSL_ODR_833HZ   = 833,
+    LSM6DSL_ODR_1660HZ  = 1660,
+    LSM6DSL_ODR_3330HZ  = 3330,
+    LSM6DSL_ODR_6660HZ  = 6660,
+    LSM6DSL_ODR_MAX
+} lsm6dsl_odr_t;
+
+int sensor_init()
+{
+    if (!device_is_ready(lsm6dsl_dev)) 
+    {
+		LOG_ERR("LSM6DSL device not ready");
+        return -1;
+	}
+    struct sensor_value odr_attr;
+    /* set accel/gyro sampling frequency to 104 Hz */
+    odr_attr.val1 = LSM6DSL_ODR_52HZ;
+    odr_attr.val2 = 0;
+    if (sensor_attr_set(lsm6dsl_dev, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &odr_attr) < 0) 
+    {
+        LOG_ERR("Cannot set sampling frequency for accel");
+        return -1;
+	}
+
+	if (sensor_attr_set(lsm6dsl_dev, SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &odr_attr) < 0) 
+    {
+        LOG_ERR("Cannot set sampling frequency for gyro");
+        return -1;
+	}
+
+    if (sensor_sample_fetch(lsm6dsl_dev) < 0) 
+    {
+        LOG_ERR("Cannot fetch sample");
+        return -1;
+	}
+    return 0;
+}
+
+
 /*
  * @brief: Sensor sampling
  * 
@@ -74,12 +131,26 @@ int ble_app_init(void)
  * @param (out) p_length: pointer to store length of new data
  * @return int: 0 on success or negative code otherwise
  */
-int sensor_sampling(uint8_t* p_data, uint16_t* p_length)
+int sensor_sampling(const struct device *dev, uint8_t* p_data, uint16_t* p_length)
 {
     int status = 0;
     __ASSERT_NO_MSG(p_data != NULL);
     __ASSERT_NO_MSG(p_length != NULL);
-    //TODO: Fill in the sensor data & update the length
+
+    static struct sensor_value accel_x, accel_y, accel_z;
+    static struct sensor_value gyro_x, gyro_y, gyro_z;
+    
+    sensor_sample_fetch_chan(dev, SENSOR_CHAN_ACCEL_XYZ);
+	sensor_channel_get(dev, SENSOR_CHAN_ACCEL_X, &accel_x);
+	sensor_channel_get(dev, SENSOR_CHAN_ACCEL_Y, &accel_y);
+	sensor_channel_get(dev, SENSOR_CHAN_ACCEL_Z, &accel_z);
+
+	/* lsm6dsl gyro */
+	sensor_sample_fetch_chan(dev, SENSOR_CHAN_GYRO_XYZ);
+	sensor_channel_get(dev, SENSOR_CHAN_GYRO_X, &gyro_x);
+	sensor_channel_get(dev, SENSOR_CHAN_GYRO_Y, &gyro_y);
+	sensor_channel_get(dev, SENSOR_CHAN_GYRO_Z, &gyro_z);
+
     *p_length = 12;
     return status;
 }
@@ -110,13 +181,19 @@ int main(void)
         return -1;
     }
 
+    if (sensor_init() != 0)
+    {
+        LOG_ERR("IMU sensor init failed");
+        return -1;
+    }
+
     while(1)
     {
         static uint32_t frame_cnt = 0;
         frame_cnt++;
         uint8_t sensor_data[20] = {0};
         uint16_t sensor_data_len = 0;
-        if (sensor_sampling(sensor_data, &sensor_data_len) != 0)
+        if (sensor_sampling(lsm6dsl_dev ,sensor_data, &sensor_data_len) != 0)
         {
             LOG_ERR("Sensor sampling failed");
         }
