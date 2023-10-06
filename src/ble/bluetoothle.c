@@ -34,14 +34,14 @@
 #define MODULE_LOG_LEVEL	        LOG_LEVEL_INF
 LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 
-#define ADV_DEFAULT_DEVICE_NAME     CONFIG_BT_DEVICE_NAME
+#define ADV_DEFAULT_DEVICE_NAME     "T"
 #define ADV_CUSTOM_DATA_TYPE        BT_DATA_MANUFACTURER_DATA
 #define ADV_PACKET_MAX_LEN          (31)
-#define ADV_CUSTOM_PAYLOAD_LEN      (16) // 4B frame counter + 12B sensor data
+#define ADV_CUSTOM_PAYLOAD_LEN      (28) // 4B frame counter + 12B sensor data
 #define ADV_NAME_MAX_LEN            (ADV_PACKET_MAX_LEN - (ADV_CUSTOM_PAYLOAD_LEN + 2) - 2) // 31B - (16+2)B CUSTOMPAYLOAD - 1B type - 1B length -  = 11B
 
 
-#define CONF_ADV_NAME_APPEND_MAC_ADDR   (1) // 1: include mac address in adv name, 0: not include
+#define CONF_ADV_NAME_APPEND_MAC_ADDR   (0) // 1: include mac address in adv name, 0: not include
 
 /******************************************************************************
 * Module Typedefs
@@ -50,12 +50,20 @@ LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 /******************************************************************************
 * Module Variable Definitions
 *******************************************************************************/
+#if (ADV_NAME_MAX_LEN < 0)
+#warning "ADV_NAME_MAX_LEN should be greater than 0"
+#else /* !(ADV_NAME_MAX_LEN < 0) */
 static char ADV_NAME[ADV_NAME_MAX_LEN] = ADV_DEFAULT_DEVICE_NAME;
+#endif /* End of (ADV_NAME_MAX_LEN < 0) */
+
 uint8_t ADV_CUSTOM_PAYLOAD[ADV_CUSTOM_PAYLOAD_LEN] = {0};
 
 static struct bt_data ADV_DATA[] = 
 {
+#if (ADV_NAME_MAX_LEN < 0)
+#else
     BT_DATA(BT_DATA_NAME_COMPLETE, ADV_NAME, sizeof(ADV_DEFAULT_DEVICE_NAME)),      /* Device name */
+#endif
     BT_DATA(ADV_CUSTOM_DATA_TYPE, ADV_CUSTOM_PAYLOAD, ADV_CUSTOM_PAYLOAD_LEN)  /* Custom payload */
 };
 
