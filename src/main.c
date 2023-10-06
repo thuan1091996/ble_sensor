@@ -17,6 +17,7 @@
 
 #include "ble\ble_gatt.h"
 #include "ble\bluetoothle.h"
+#include "zephyr/sys/__assert.h"
 /******************************************************************************
 * Module Preprocessor Constants
 *******************************************************************************/
@@ -68,6 +69,7 @@ int ble_app_init(void)
 }
 // Sensor stuff
 
+#define SENSOR_PACKET_LEN               (24) // 4B for each axis * 6 axis
 #if (CONFIG_DT_HAS_ST_LSM6DSL_ENABLED != 0)
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
@@ -123,6 +125,17 @@ int sensor_init()
     return 0;
 }
 
+/*
+ * @brief: Convert sensor data to float
+ * 
+ * @param val: input sensor data
+ * @return float 
+ */
+float sensor_data_convert(struct sensor_value *val)
+{
+    __ASSERT_NO_MSG(val != NULL);
+    return (float)(val->val1 + val->val2 / 1000000.0f);
+}
 
 /*
  * @brief: Sensor sampling
@@ -139,19 +152,69 @@ int sensor_sampling(const struct device *dev, uint8_t* p_data, uint16_t* p_lengt
 
     static struct sensor_value accel_x, accel_y, accel_z;
     static struct sensor_value gyro_x, gyro_y, gyro_z;
+
+    static float accel_x_f, accel_y_f, accel_z_f;
+    static float gyro_x_f, gyro_y_f, gyro_z_f;
     
-    sensor_sample_fetch_chan(dev, SENSOR_CHAN_ACCEL_XYZ);
-	sensor_channel_get(dev, SENSOR_CHAN_ACCEL_X, &accel_x);
-	sensor_channel_get(dev, SENSOR_CHAN_ACCEL_Y, &accel_y);
-	sensor_channel_get(dev, SENSOR_CHAN_ACCEL_Z, &accel_z);
+    if (sensor_sample_fetch_chan(dev, SENSOR_CHAN_ACCEL_XYZ) < 0) {
+        LOG_ERR("Cannot fetch accel sample");
+        return -1;
+    }
+    if (sensor_channel_get(dev, SENSOR_CHAN_ACCEL_X, &accel_x) < 0) {
+        LOG_ERR("Cannot get accel_x data");
+        return -1;
+    }
+    if (sensor_channel_get(dev, SENSOR_CHAN_ACCEL_Y, &accel_y) < 0) {
+        LOG_ERR("Cannot get accel_y data");
+        return -1;
+    }
+    if (sensor_channel_get(dev, SENSOR_CHAN_ACCEL_Z, &accel_z) < 0) {
+        LOG_ERR("Cannot get accel_z data");
+        return -1;
+    }
 
-	/* lsm6dsl gyro */
-	sensor_sample_fetch_chan(dev, SENSOR_CHAN_GYRO_XYZ);
-	sensor_channel_get(dev, SENSOR_CHAN_GYRO_X, &gyro_x);
-	sensor_channel_get(dev, SENSOR_CHAN_GYRO_Y, &gyro_y);
-	sensor_channel_get(dev, SENSOR_CHAN_GYRO_Z, &gyro_z);
+    /* lsm6dsl gyro */
+    if (sensor_sample_fetch_chan(dev, SENSOR_CHAN_GYRO_XYZ) < 0) {
+        LOG_ERR("Cannot fetch gyro sample");
+        return -1;
+    }
+    if (sensor_channel_get(dev, SENSOR_CHAN_GYRO_X, &gyro_x) < 0) {
+        LOG_ERR("Cannot get gyro_x data");
+        return -1;
+    }
+    if (sensor_channel_get(dev, SENSOR_CHAN_GYRO_Y, &gyro_y) < 0) {
+        LOG_ERR("Cannot get gyro_y data");
+        return -1;
+    }
+    if (sensor_channel_get(dev, SENSOR_CHAN_GYRO_Z, &gyro_z) < 0) {
+        LOG_ERR("Cannot get gyro_z data");
+        return -1;
+    }
 
-    *p_length = 12;
+    accel_x_f = sensor_data_convert(&accel_x);
+    accel_y_f = sensor_data_convert(&accel_y);
+    accel_z_f = sensor_data_convert(&accel_z);
+
+    gyro_x_f = sensor_data_convert(&gyro_x);
+    gyro_y_f = sensor_data_convert(&gyro_y);
+    gyro_z_f = sensor_data_convert(&gyro_z);
+
+    uint16_t payload_idx = 0;
+    memcpy(p_data + payload_idx, &accel_x_f, sizeof(accel_x_f));
+    payload_idx += sizeof(accel_x_f);
+    memcpy(p_data + payload_idx, &accel_y_f, sizeof(accel_y_f));
+    payload_idx += sizeof(accel_y_f);
+    memcpy(p_data + payload_idx, &accel_z_f, sizeof(accel_z_f));
+    payload_idx += sizeof(accel_z_f);
+
+    memcpy(p_data + payload_idx, &gyro_x_f, sizeof(gyro_x_f));
+    payload_idx += sizeof(gyro_x_f);
+    memcpy(p_data + payload_idx, &gyro_y_f, sizeof(gyro_y_f));
+    payload_idx += sizeof(gyro_y_f);
+    memcpy(p_data + payload_idx, &gyro_z_f, sizeof(gyro_z_f));
+    payload_idx += sizeof(gyro_z_f);
+
+    *p_length = payload_idx;
     return status;
 }
 
@@ -167,14 +230,18 @@ int sensor_data_send_ble(uint8_t* p_data, uint16_t* p_length, uint32_t frame_cnt
 {
     __ASSERT_NO_MSG(p_data != NULL);
     __ASSERT_NO_MSG(p_length != NULL);
-    uint8_t send_payload[16] = {0}; // 4B frame count + 12B sensor data
+    uint8_t send_payload[sizeof(frame_cnt) + SENSOR_PACKET_LEN] = {0}; // 4B frame count + 12B sensor data
     memcpy(send_payload, &frame_cnt, sizeof(frame_cnt));
     memcpy(send_payload + sizeof(frame_cnt), p_data, *p_length);
     return ble_set_custom_adv_payload(send_payload, sizeof(frame_cnt) + *p_length);
 }
-
+#define FW_MAJOR_VERSION        (0)
+#define FW_MINOR_VERSION        (0)
+#define FW_BUIILD_VERSION       (1)
 int main(void)
 {
+    LOG_INF("Firmware version: %d.%d.%d", FW_MAJOR_VERSION, FW_MINOR_VERSION, FW_BUIILD_VERSION);
+    k_sleep(K_MSEC(2000));
 	if (ble_app_init() != 0)
     {
         LOG_ERR("App BLE init failed");
@@ -191,19 +258,22 @@ int main(void)
     {
         static uint32_t frame_cnt = 0;
         frame_cnt++;
-        uint8_t sensor_data[20] = {0};
+        uint8_t sensor_data[50] = {0};
         uint16_t sensor_data_len = 0;
         if (sensor_sampling(lsm6dsl_dev ,sensor_data, &sensor_data_len) != 0)
         {
             LOG_ERR("Sensor sampling failed");
         }
-        if(sensor_data_len == 12)
+        if(sensor_data_len == SENSOR_PACKET_LEN)
         {
             if (sensor_data_send_ble(sensor_data, &sensor_data_len, frame_cnt) != 0)
             {
                 LOG_ERR("Sensor data send BLE failed");
             }
-            LOG_INF("Frame %d sent", frame_cnt);
+            else
+            {
+                LOG_INF("Frame %d sent", frame_cnt);
+            }
         }
         else
         {
