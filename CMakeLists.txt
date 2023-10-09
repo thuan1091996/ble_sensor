@@ -9,6 +9,7 @@ project(ble_sensor)
 
 target_sources(app PRIVATE 
                     src/main.c
+                    src/imu_driver.c
                     # BLE drivers
                     src/ble/bluetoothle.c
                     src/ble/ble_gatt.c
