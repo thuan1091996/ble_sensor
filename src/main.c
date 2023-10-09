@@ -17,13 +17,11 @@
 
 #include "ble\ble_gatt.h"
 #include "ble\bluetoothle.h"
-#include "zephyr/sys/__assert.h"
 /******************************************************************************
 * Module Preprocessor Constants
 *******************************************************************************/
 #define SAMPLING_RATE_MS        (50)
 
-#define CONF_TEST_COUNTER       (1) // 1: test counter by toggle IO in counter callback, 0: not test counter
 /******************************************************************************
 * Module Preprocessor Macros
 *******************************************************************************/
@@ -273,6 +271,8 @@ int main(void)
             else
             {
                 LOG_INF("Frame %d sent", frame_cnt);
+                printk("Accel (m/s^2): %.02f, %.02f, %.02f \r\n", *(float*)sensor_data, *(float*)(sensor_data + 4), *(float*)(sensor_data + 8));
+                printk("Gyro (radians/s): %.02f, %.02f, %.02f \r\n", *(float*)(sensor_data + 12), *(float*)(sensor_data + 16), *(float*)(sensor_data + 20));
             }
         }
         else
