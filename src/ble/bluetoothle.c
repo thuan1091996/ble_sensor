@@ -37,8 +37,8 @@ LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 #define ADV_DEFAULT_DEVICE_NAME     "T"
 #define ADV_CUSTOM_DATA_TYPE        BT_DATA_MANUFACTURER_DATA
 #define ADV_PACKET_MAX_LEN          (31)
-#define ADV_CUSTOM_PAYLOAD_LEN      (28) // 4B frame counter + 12B sensor data
-#define ADV_NAME_MAX_LEN            (ADV_PACKET_MAX_LEN - (ADV_CUSTOM_PAYLOAD_LEN + 2) - 2) // 31B - (16+2)B CUSTOMPAYLOAD - 1B type - 1B length -  = 11B
+#define ADV_CUSTOM_PAYLOAD_LEN      (29) // Max length - 1B type - 1B length
+#define ADV_NAME_MAX_LEN            (ADV_PACKET_MAX_LEN - (ADV_CUSTOM_PAYLOAD_LEN + 2) - 2)
 
 
 #define CONF_ADV_NAME_APPEND_MAC_ADDR   (0) // 1: include mac address in adv name, 0: not include

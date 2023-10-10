@@ -26,6 +26,7 @@
 
 #define SAMPLING_RATE_MS                (50)
 #define SENSOR_PACKET_LEN               (24) // 4B for each axis * 6 axis
+#define SENSOR_DATA_HEADER              (0xAA)
 
 /******************************************************************************
 * Module Preprocessor Macros
@@ -84,12 +85,12 @@ int sensor_data_send_ble(uint8_t* p_data, uint16_t* p_length, uint32_t frame_cnt
 {
     __ASSERT_NO_MSG(p_data != NULL);
     __ASSERT_NO_MSG(p_length != NULL);
-    uint8_t send_payload[sizeof(frame_cnt) + SENSOR_PACKET_LEN] = {0}; // 4B frame count + 12B sensor data
-    memcpy(send_payload, &frame_cnt, sizeof(frame_cnt));
-    memcpy(send_payload + sizeof(frame_cnt), p_data, *p_length);
-    return ble_set_custom_adv_payload(send_payload, sizeof(frame_cnt) + *p_length);
+    uint8_t send_payload[sizeof(frame_cnt) + SENSOR_PACKET_LEN + 1] = {0}; // 1B frame heaader + 4B frame count + 12B sensor data
+    send_payload[0] = SENSOR_DATA_HEADER;
+    memcpy(send_payload + 1, &frame_cnt, sizeof(frame_cnt));
+    memcpy(send_payload + 1 +sizeof(frame_cnt), p_data, *p_length);
+    return ble_set_custom_adv_payload(send_payload, 1 + sizeof(frame_cnt) + *p_length);
 }
-
 
 int main(void)
 {
