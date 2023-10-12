@@ -102,14 +102,16 @@ int main(void)
         return -1;
     }
 
+#if (CONFIG_BOARD_XIAO_BLE == 1) 
     if (sensor_init() != 0)
     {
         LOG_ERR("IMU sensor init failed");
         return -1;
     }
-
+#endif /* End of (CONFIG_BOARD_XIAO_BLE == 1)  */
     while(1)
     {
+#if (CONFIG_BOARD_XIAO_BLE == 1) 
         static uint32_t frame_cnt = 0;
         frame_cnt++;
         uint8_t sensor_data[50] = {0};
@@ -135,6 +137,7 @@ int main(void)
         {
             LOG_WRN("Sensor data length %d is invalid", sensor_data_len);
         }
+#endif /* End of (CONFIG_BOARD_XIAO_BLE == 1)  */
         k_sleep(K_MSEC(SAMPLING_RATE_MS));
     }
 	return 0;

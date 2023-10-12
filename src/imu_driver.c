@@ -44,6 +44,8 @@ LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 /******************************************************************************
 * Function Definitions
 *******************************************************************************/
+#if (CONFIG_BOARD_XIAO_BLE == 1) 
+
 #if (CONFIG_DT_HAS_ST_LSM6DSL_ENABLED != 0)
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
@@ -162,3 +164,4 @@ int sensor_sampling(uint8_t* p_data, uint16_t* p_length)
     *p_length = payload_idx;
     return status;
 }
+#endif /* End of (CONFIG_BOARD_XIAO_BLE == 1)  */
