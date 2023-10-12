@@ -34,7 +34,7 @@
 #define MODULE_LOG_LEVEL	        LOG_LEVEL_INF
 LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 
-#define ADV_DEFAULT_DEVICE_NAME     "T"
+#define ADV_DEFAULT_DEVICE_NAME     CONFIG_BT_DEVICE_NAME
 #define ADV_CUSTOM_DATA_TYPE        BT_DATA_MANUFACTURER_DATA
 #define ADV_PACKET_MAX_LEN          (31)
 #define ADV_CUSTOM_PAYLOAD_LEN      (29) // Max length - 1B type - 1B length
@@ -52,19 +52,15 @@ LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 *******************************************************************************/
 volatile static bool is_advertising=false;
 
-#if (ADV_NAME_MAX_LEN < 0)
-#warning "ADV_NAME_MAX_LEN should be greater than 0"
-#else /* !(ADV_NAME_MAX_LEN < 0) */
-static char ADV_NAME[ADV_NAME_MAX_LEN] = ADV_DEFAULT_DEVICE_NAME;
-#endif /* End of (ADV_NAME_MAX_LEN < 0) */
 
 uint8_t ADV_CUSTOM_PAYLOAD[ADV_CUSTOM_PAYLOAD_LEN] = {0};
 
 static struct bt_data ADV_DATA[] = 
 {
 #if (ADV_NAME_MAX_LEN < 0)
+#warning "ADV_NAME_MAX_LEN is negative"
 #else
-    BT_DATA(BT_DATA_NAME_COMPLETE, ADV_NAME, sizeof(ADV_DEFAULT_DEVICE_NAME)),      /* Device name */
+    BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME)),      /* Device name */
 #endif
     BT_DATA(ADV_CUSTOM_DATA_TYPE, ADV_CUSTOM_PAYLOAD, ADV_CUSTOM_PAYLOAD_LEN)  /* Custom payload */
 };
@@ -214,7 +210,7 @@ int ble_set_adv_name(char* p_name)
     __ASSERT_NO_MSG(p_name != NULL);
     if(strlen(p_name) > ADV_NAME_MAX_LEN)
     {
-        LOG_ERR("BLE name too long, max length is %d", ADV_NAME_MAX_LEN);
+        LOG_ERR("BLE name too long, %d/%d", strlen(p_name), ADV_NAME_MAX_LEN);
     }
     // Find index of BT_DATA_NAME_COMPLETE in ADV_DATA[]
     for(int index = 0; index < ARRAY_SIZE(ADV_DATA); index++)
