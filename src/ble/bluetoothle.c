@@ -50,6 +50,8 @@ LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 /******************************************************************************
 * Module Variable Definitions
 *******************************************************************************/
+volatile static bool is_advertising=false;
+
 #if (ADV_NAME_MAX_LEN < 0)
 #warning "ADV_NAME_MAX_LEN should be greater than 0"
 #else /* !(ADV_NAME_MAX_LEN < 0) */
@@ -78,6 +80,16 @@ static ble_callback_t ble_cb_app = {
 /******************************************************************************
 * Static Function Definitions
 *******************************************************************************/
+static bool ble_is_advertising(void)
+{
+    return is_advertising;
+}
+
+static void ble_set_advertising(bool is_adv)
+{
+    is_advertising = is_adv;
+}
+
 static void on_ble_connect(struct bt_conn *conn, uint8_t err)
 {
 	if(err) 
@@ -107,6 +119,11 @@ static void on_ble_disconnect(struct bt_conn *conn, uint8_t reason)
 *******************************************************************************/
 int ble_adv_start(void)
 {
+    if(ble_is_advertising())
+    {
+        LOG_INF("Advertising already started\n");
+        return 0;
+    }
     struct bt_le_adv_param adv_param =
     {
         .id = 0,
@@ -120,7 +137,8 @@ int ble_adv_start(void)
         LOG_ERR("Couldn't start advertising (err = %d)", errorcode);
         return errorcode;
     }
-    LOG_INF("Advertising fully started\n");
+    ble_set_advertising(true);
+    LOG_INF("Advertising successfully started\n");
     if(ble_cb_app.ble_adv_started_cb != NULL)
     {
         ble_cb_app.ble_adv_started_cb();
@@ -130,12 +148,18 @@ int ble_adv_start(void)
 
 int ble_adv_stop(void)
 {
+    if(!ble_is_advertising())
+    {
+        LOG_INF("Advertising already stopped\n");
+        return 0;
+    }
     int errorcode = bt_le_adv_stop();
     if (errorcode) {
         LOG_ERR("Couldn't stop advertising (err = %d)", errorcode);
         return errorcode;
     }
-    LOG_INF("Advertising 0fully stopped\n");
+    ble_set_advertising(false);
+    LOG_INF("Advertising successfully stopped\n");
     if(ble_cb_app.ble_adv_stopped_cb != NULL)
     {
         ble_cb_app.ble_adv_stopped_cb();
@@ -201,7 +225,14 @@ int ble_set_adv_name(char* p_name)
             ADV_DATA[index].data_len = strlen(p_name);
             memcpy((void *)ADV_DATA[index].data, p_name, strlen(p_name));
             LOG_INF("BLE name set to %s", p_name);
-            return bt_le_adv_update_data(ADV_DATA, ARRAY_SIZE(ADV_DATA), NULL, 0);
+            if(ble_is_advertising())
+            {
+                return bt_le_adv_update_data(ADV_DATA, ARRAY_SIZE(ADV_DATA), NULL, 0);
+            }
+            else
+            {
+                return 0;
+            }
         }
     }
     LOG_ERR("Couldn't find BT_DATA_NAME_COMPLETE in ADV_DATA");
@@ -230,7 +261,14 @@ int ble_set_custom_adv_payload(uint8_t* p_data, uint8_t len)
             memset((void *)ADV_DATA[index].data, 0, ADV_DATA[index].data_len);
             ADV_DATA[index].data_len = len;
             memcpy((void *)ADV_DATA[index].data, p_data, len);
-            return bt_le_adv_update_data(ADV_DATA, ARRAY_SIZE(ADV_DATA), NULL, 0);
+            if(ble_is_advertising())
+            {
+                return bt_le_adv_update_data(ADV_DATA, ARRAY_SIZE(ADV_DATA), NULL, 0);
+            }
+            else
+            {
+                return 0;
+            }
         }
     }
     LOG_ERR("Couldn't find ADV_CUSTOM_DATA_TYPE in ADV_DATA");
