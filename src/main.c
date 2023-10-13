@@ -153,6 +153,8 @@ int main(void)
         frame_cnt++;
         uint8_t sensor_data[50] = {0};
         uint16_t sensor_data_len = 0;
+#if (CONFIG_BOARD_XIAO_BLE == 1) 
+
         if (sensor_sampling(sensor_data, &sensor_data_len) != 0)
         {
             LOG_ERR("Sensor sampling failed");
@@ -166,13 +168,28 @@ int main(void)
             else
             {
                 LOG_INF("Frame %d sent", frame_cnt);
-                printk("Accel (m/s^2): %.02f, %.02f, %.02f \r\n", *(float*)sensor_data, *(float*)(sensor_data + 4), *(float*)(sensor_data + 8));
-                printk("Gyro (radians/s): %.02f, %.02f, %.02f \r\n", *(float*)(sensor_data + 12), *(float*)(sensor_data + 16), *(float*)(sensor_data + 20));
+                LOG_DBG("Accel (m/s^2): %.02f, %.02f, %.02f \r\n", *(float*)sensor_data, *(float*)(sensor_data + 4), *(float*)(sensor_data + 8));
+                LOG_DBG("Gyro (radians/s): %.02f, %.02f, %.02f \r\n", *(float*)(sensor_data + 12), *(float*)(sensor_data + 16), *(float*)(sensor_data + 20));
             }
         }
         else
         {
             LOG_WRN("Sensor data length %d is invalid", sensor_data_len);
+        }
+#else
+        // Simulate sending sensor data
+        for(uint8_t count=0; count< sizeof(sensor_data); count++)
+        {
+            sensor_data[count] = count;
+        }
+        sensor_data_len = sizeof(sensor_data);
+        if (sensor_data_send_ble(sensor_data, &sensor_data_len, frame_cnt) != 0)
+        {
+            LOG_ERR("Sensor data send BLE failed");
+        }
+        else
+        {
+            LOG_INF("Frame %d sent", frame_cnt);
         }
 #endif /* End of (CONFIG_BOARD_XIAO_BLE == 1)  */
         k_sleep(K_MSEC(SAMPLING_RATE_MS));
