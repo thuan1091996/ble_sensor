@@ -99,7 +99,7 @@ typedef struct
 * Function Prototypes
 *******************************************************************************/
 void ble_custom_service_init(ble_custom_gatt_cb_t* ble_gatt_cb);
-int char3_send_notify(uint8_t* p_data, uint16_t len);
+int char3_send_indication(uint8_t* p_data, uint16_t len);
 int char4_send_notify(uint8_t* p_data, uint16_t len);
 
 

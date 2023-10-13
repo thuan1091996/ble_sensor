@@ -46,7 +46,7 @@ LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 /******************************************************************************
 * Module Variable Definitions
 *******************************************************************************/
-static bool g_char3_notify_en=false, g_char4_notify_en=false;
+static bool g_char3_indicate_en=false, g_char4_notify_en=false;
 static const struct bt_gatt_attr *p_char3_attr = NULL, *p_char4_attr = NULL; 
 
 static ble_custom_gatt_cb_t ble_custom_gatt_cb = 
@@ -219,19 +219,19 @@ void custom_char3_notify_changed(const struct bt_gatt_attr *attr, uint16_t value
     ARG_UNUSED(attr);
     switch(value)
     {
-        case BT_GATT_CCC_NOTIFY:
+        case BT_GATT_CCC_INDICATE:
 
-            g_char3_notify_en = true;
+            g_char3_indicate_en = true;
             break;
 
         case 0: 
-            g_char3_notify_en = false;
+            g_char3_indicate_en = false;
             break;
         
         default: 
             LOG_ERR("Error, CCCD has been set to an invalid value");     
     } 
-    LOG_INF("CUSTOM_CHAR3 notification %s.", g_char3_notify_en ? "enabled" : "disabled");
+    LOG_INF("CUSTOM_CHAR3 notification %s.", g_char3_indicate_en ? "enabled" : "disabled");
 }
 
 void custom_char4_notify_changed(const struct bt_gatt_attr *attr, uint16_t value)
@@ -278,7 +278,19 @@ void ble_custom_service_init(ble_custom_gatt_cb_t* ble_gatt_cb)
     LOG_INF("Attribute handle %p, %p", p_char3_attr, p_char4_attr);
 }
 
-int char3_send_notify(uint8_t* p_data, uint16_t len)
+static uint8_t indicating;
+static struct bt_gatt_indicate_params ind_params;
+static void indicate_cb(struct bt_conn *conn, struct bt_gatt_indicate_params *params, uint8_t err)
+{
+	LOG_WRN("Indication %s\n", err != 0U ? "fail" : "success");
+}
+
+static void indicate_destroy(struct bt_gatt_indicate_params *params)
+{
+	LOG_WRN("Indication complete\n");
+	indicating = 0U;
+}
+int char3_send_indication(uint8_t* p_data, uint16_t len)
 {
     __ASSERT_NO_MSG(p_data != NULL);
     if(p_char3_attr == NULL)
@@ -286,15 +298,21 @@ int char3_send_notify(uint8_t* p_data, uint16_t len)
         LOG_ERR("Can't find CUSTOM_CHAR3 attribute handle");
         return -1;
     }
-    int ret_val = 0;
-    if(!g_char3_notify_en)
+    int ret_val = -1;
+    if(!g_char3_indicate_en)
     {
         LOG_WRN("CUSTOM_CHAR3 notification disable");
     }
     else 
     {
         LOG_INF("CUSTOM_CHAR3 sending %dB notification", len);
-        ret_val = bt_gatt_notify(NULL, p_char3_attr, p_data, len);
+        // ret_val = bt_gatt_notify(NULL, p_char3_attr, p_data, len);
+        ind_params.attr = p_char3_attr;
+		ind_params.func = indicate_cb;
+		ind_params.destroy = indicate_destroy;
+		ind_params.data = p_data;
+		ind_params.len = len;
+        ret_val = bt_gatt_indicate(NULL, &ind_params);
     }
     return ret_val;
 }
@@ -338,7 +356,7 @@ BT_GATT_PRIMARY_SERVICE(BT_UUID_CUSTOM_SERV1),
                     custom_char2_read_cb, NULL, NULL),
     // Custom char3
     BT_GATT_CHARACTERISTIC(BT_UUID_CUSTOM_CHAR3,
-                    BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
+                    BT_GATT_CHRC_READ | BT_GATT_CHRC_INDICATE,
                     BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, /* No security enable */
                     custom_char3_read_cb, NULL, NULL),          
     BT_GATT_CCC(custom_char3_notify_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),

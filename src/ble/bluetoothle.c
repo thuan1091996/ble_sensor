@@ -60,7 +60,7 @@ static struct bt_data ADV_DATA[] =
 #if (ADV_NAME_MAX_LEN < 0)
 #warning "ADV_NAME_MAX_LEN is negative"
 #else
-    BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME)),      /* Device name */
+    BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME)-1),      /* Device name */
 #endif
     BT_DATA(ADV_CUSTOM_DATA_TYPE, ADV_CUSTOM_PAYLOAD, ADV_CUSTOM_PAYLOAD_LEN)  /* Custom payload */
 };

@@ -82,6 +82,9 @@ int ble_app_init(void)
         LOG_ERR("BLE init failed");
         return -1;
     }
+
+    ble_custom_service_init(NULL);
+
     if (ble_adv_start() != 0)
     {
         LOG_ERR("BLE adv start failed");
@@ -107,7 +110,18 @@ int sensor_data_send_ble(uint8_t* p_data, uint16_t* p_length, uint32_t frame_cnt
     send_payload[0] = SENSOR_DATA_HEADER;
     memcpy(send_payload + 1, &frame_cnt, sizeof(frame_cnt));
     memcpy(send_payload + 1 +sizeof(frame_cnt), p_data, *p_length);
+#if (SENSOR_DATA_SEND_BOARDCAST != 0)
     return ble_set_custom_adv_payload(send_payload, 1 + sizeof(frame_cnt) + *p_length);
+#else /* !(SENSOR_DATA_SEND_BOARDCAST != 0) */
+    int send_status = char3_send_indication(send_payload, 1 + sizeof(frame_cnt) + *p_length);
+    if(send_status != 0)
+    {
+        LOG_ERR("BLE send failed with status %d", send_status);
+        return send_status;
+    }
+    return 0;
+#endif /* End of (SENSOR_DATA_SEND_BOARDCAST != 0) */
+    
 }
 
 int main(void)
