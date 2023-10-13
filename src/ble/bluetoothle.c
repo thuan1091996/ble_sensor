@@ -51,6 +51,7 @@ LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 * Module Variable Definitions
 *******************************************************************************/
 volatile static bool is_advertising=false;
+static struct bt_conn *current_conn;
 
 
 uint8_t ADV_CUSTOM_PAYLOAD[ADV_CUSTOM_PAYLOAD_LEN] = {0};
@@ -76,6 +77,45 @@ static ble_callback_t ble_cb_app = {
 /******************************************************************************
 * Static Function Definitions
 *******************************************************************************/
+static void MTU_exchange_cb(struct bt_conn *conn, uint8_t err, struct bt_gatt_exchange_params *params)
+{
+	if (!err) 
+    {
+		LOG_WRN("MTU exchange done. "); 
+        LOG_WRN("MTU: %d", bt_gatt_get_mtu(current_conn) - 3);
+	} 
+    else 
+    {
+		LOG_ERR("MTU exchange failed (err %" PRIu8 ")", err);
+	}
+}
+
+static void request_mtu_exchange(void)
+{	int err;
+	static struct bt_gatt_exchange_params exchange_params;
+	exchange_params.func = MTU_exchange_cb;
+
+	err = bt_gatt_exchange_mtu(current_conn, &exchange_params);
+	if (err) 
+    {
+		LOG_WRN("MTU exchange failed (err %d)", err);
+	} 
+    else 
+    {
+		LOG_INF("MTU exchange pending");
+	}
+}
+
+static void request_data_len_update(void)
+{
+	int err;
+	err = bt_conn_le_data_len_update(current_conn, BT_LE_DATA_LEN_PARAM_MAX);
+    if (err) 
+    {
+        LOG_ERR("LE data length update request failed: %d",  err);
+    }
+}
+
 static bool ble_is_advertising(void)
 {
     return is_advertising;
@@ -93,7 +133,10 @@ static void on_ble_connect(struct bt_conn *conn, uint8_t err)
 		LOG_ERR("BLE connection err: %d, re-advertising \n", err);
 		return;
 	}
-    LOG_INF("BLE Connected.");
+    current_conn= bt_conn_ref(conn); 
+    LOG_INF("BLE Connected");
+	request_mtu_exchange();
+	request_data_len_update();
 
     if(ble_cb_app.ble_connected_cb != NULL)
     {
@@ -108,6 +151,25 @@ static void on_ble_disconnect(struct bt_conn *conn, uint8_t reason)
     {
         ble_cb_app.ble_disconnected_cb();
     }
+}
+
+void on_ble_param_updated(struct bt_conn *conn, uint16_t interval, uint16_t latency, uint16_t timeout)
+{
+    LOG_WRN("BLE param updated");
+    // Dump all params
+    LOG_WRN("BLE interval: %.02f ms", (float)interval * 1.25);
+    LOG_WRN("BLE timeout: %.02f ms", (float)timeout * 10);
+    LOG_WRN("BLE latency: %d", latency);
+}
+
+void on_ble_data_len_updated(struct bt_conn *conn, struct bt_conn_le_data_len_info *info)
+{
+    LOG_WRN("BLE data len updated");
+    // Dump all params
+    LOG_WRN("BLE tx_max_len: %dB", info->tx_max_len);
+    LOG_WRN("BLE tx_max_time: %d (us)", info->tx_max_time);
+    LOG_WRN("BLE rx_max_len: %dB", info->rx_max_len);
+    LOG_WRN("BLE rx_max_time: %d (us)", info->rx_max_time);
 }
 
 /******************************************************************************
@@ -163,7 +225,8 @@ int ble_init(ble_callback_t* p_app_cb)
     static struct bt_conn_cb ble_cb = {
         .connected 		= &on_ble_connect,
         .disconnected 	= &on_ble_disconnect,
-
+        .le_param_updated = &on_ble_param_updated,
+        .le_data_len_updated = &on_ble_data_len_updated,
     };
 
     LOG_INF("BLE initializing \n\r");
