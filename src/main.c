@@ -43,7 +43,25 @@ LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 /******************************************************************************
 * Module Variable Definitions
 *******************************************************************************/
+volatile static bool is_ble_connect=false;
 
+void on_ble_connect(void)
+{
+    is_ble_connect = true;
+    LOG_INF("BLE connected");
+
+}
+
+void on_ble_disconnect(void)
+{
+    is_ble_connect = false;
+    LOG_INF("BLE disconnected");
+}
+ble_callback_t ble_callback = 
+{
+    .ble_connected_cb = &on_ble_connect,
+    .ble_disconnected_cb = &on_ble_disconnect,
+};
 /******************************************************************************
 * Function Prototypes
 *******************************************************************************/
@@ -59,7 +77,7 @@ int ble_app_init(void);
  */
 int ble_app_init(void)
 {
-    if(ble_init(NULL) != 0)
+    if(ble_init(&ble_callback) != 0)
     {
         LOG_ERR("BLE init failed");
         return -1;
@@ -111,7 +129,12 @@ int main(void)
 #endif /* End of (CONFIG_BOARD_XIAO_BLE == 1)  */
     while(1)
     {
-#if (CONFIG_BOARD_XIAO_BLE == 1) 
+        if(is_ble_connect == false)
+        {
+            k_sleep(K_MSEC(500));
+            LOG_WRN("Waiting for BLE connection");
+            continue;
+        }
         static uint32_t frame_cnt = 0;
         frame_cnt++;
         uint8_t sensor_data[50] = {0};

@@ -120,15 +120,7 @@ int ble_adv_start(void)
         LOG_INF("Advertising already started\n");
         return 0;
     }
-    struct bt_le_adv_param adv_param =
-    {
-        .id = 0,
-        .sid = 0,
-        .options = BT_LE_ADV_OPT_NONE | BT_LE_ADV_OPT_USE_IDENTITY,
-        .interval_min = 0x0020, // 20ms
-        .interval_max = 0x0030, // 30ms
-    };
-	int errorcode = bt_le_adv_start(&adv_param, ADV_DATA, ARRAY_SIZE(ADV_DATA), NULL, 0);
+	int errorcode = bt_le_adv_start(BT_LE_ADV_CONN, ADV_DATA, ARRAY_SIZE(ADV_DATA), NULL, 0);
     if (errorcode) {
         LOG_ERR("Couldn't start advertising (err = %d)", errorcode);
         return errorcode;
