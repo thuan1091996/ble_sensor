@@ -155,6 +155,10 @@ static void on_ble_connect(struct bt_conn *conn, uint8_t err)
 static void on_ble_disconnect(struct bt_conn *conn, uint8_t reason)
 {
 	LOG_INF("BLE Disconnected (reason: %d)", reason);
+    if (current_conn) {
+		bt_conn_unref(current_conn);
+		current_conn = NULL;
+	}
     if(ble_cb_app.ble_disconnected_cb != NULL)
     {
         ble_cb_app.ble_disconnected_cb();
