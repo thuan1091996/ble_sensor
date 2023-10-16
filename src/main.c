@@ -33,7 +33,7 @@
 *******************************************************************************/
 #include "zephyr/logging/log.h"
 #define MODULE_NAME			        main
-#define MODULE_LOG_LEVEL	        LOG_LEVEL_DBG
+#define MODULE_LOG_LEVEL	        LOG_LEVEL_INF
 LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 
 /******************************************************************************
@@ -180,11 +180,11 @@ int main(void)
         }
 #else
         // Simulate sending sensor data
-        for(uint8_t count=0; count< sizeof(sensor_data); count++)
+        for(uint8_t count=0; count< SENSOR_PACKET_LEN; count++)
         {
             sensor_data[count] = count;
         }
-        sensor_data_len = sizeof(sensor_data);
+        sensor_data_len = SENSOR_PACKET_LEN;
         if (sensor_data_send_ble(sensor_data, &sensor_data_len, frame_cnt) != 0)
         {
             LOG_ERR("Sensor data send BLE failed");
