@@ -30,7 +30,7 @@
 *******************************************************************************/
 #include <zephyr/logging/log.h>
 #define MODULE_NAME			        gatt_sensor
-#define MODULE_LOG_LEVEL	        LOG_LEVEL_DBG
+#define MODULE_LOG_LEVEL	        LOG_LEVEL_INF
 LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 /******************************************************************************
 * Module Preprocessor Macros
@@ -231,7 +231,7 @@ void custom_char3_notify_changed(const struct bt_gatt_attr *attr, uint16_t value
         default: 
             LOG_ERR("Error, CCCD has been set to an invalid value");     
     } 
-    LOG_INF("CUSTOM_CHAR3 notification %s.", g_char3_indicate_en ? "enabled" : "disabled");
+    LOG_INF("CUSTOM_CHAR3 indication %s.", g_char3_indicate_en ? "enabled" : "disabled");
 }
 
 void custom_char4_notify_changed(const struct bt_gatt_attr *attr, uint16_t value)
@@ -282,12 +282,12 @@ static uint8_t indicating;
 static struct bt_gatt_indicate_params ind_params;
 static void indicate_cb(struct bt_conn *conn, struct bt_gatt_indicate_params *params, uint8_t err)
 {
-	LOG_WRN("Indication %s\n", err != 0U ? "fail" : "success");
+	LOG_DBG("Indication %s\n", err != 0U ? "fail" : "success");
 }
 
 static void indicate_destroy(struct bt_gatt_indicate_params *params)
 {
-	LOG_WRN("Indication complete\n");
+	LOG_DBG("Indication complete\n");
 	indicating = 0U;
 }
 int char3_send_indication(uint8_t* p_data, uint16_t len)
@@ -301,11 +301,11 @@ int char3_send_indication(uint8_t* p_data, uint16_t len)
     int ret_val = -1;
     if(!g_char3_indicate_en)
     {
-        LOG_WRN("CUSTOM_CHAR3 notification disable");
+        LOG_INF("CUSTOM_CHAR3 indication disable");
     }
     else 
     {
-        LOG_INF("CUSTOM_CHAR3 sending %dB notification", len);
+        LOG_DBG("CUSTOM_CHAR3 sending %dB indication", len);
         // ret_val = bt_gatt_notify(NULL, p_char3_attr, p_data, len);
         ind_params.attr = p_char3_attr;
 		ind_params.func = indicate_cb;
@@ -344,31 +344,31 @@ int char4_send_notify(uint8_t* p_data, uint16_t len)
 */
 BT_GATT_SERVICE_DEFINE(CUSTOM_SERVICE1_NAME,
 BT_GATT_PRIMARY_SERVICE(BT_UUID_CUSTOM_SERV1),
-    // Custom char1
-    BT_GATT_CHARACTERISTIC(BT_UUID_CUSTOM_CHAR1,
-                    BT_GATT_CHRC_READ,
-                    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, /* No security enable */
-                    custom_char1_read_cb, NULL, NULL),
-    // Custom char2
-    BT_GATT_CHARACTERISTIC(BT_UUID_CUSTOM_CHAR2,
-                    BT_GATT_CHRC_READ,
-                    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, /* No security enable */
-                    custom_char2_read_cb, NULL, NULL),
-    // Custom char3
+    // // Custom char1
+    // BT_GATT_CHARACTERISTIC(BT_UUID_CUSTOM_CHAR1,
+    //                 BT_GATT_CHRC_READ,
+    //                 BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, /* No security enable */
+    //                 custom_char1_read_cb, NULL, NULL),
+    // // Custom char2
+    // BT_GATT_CHARACTERISTIC(BT_UUID_CUSTOM_CHAR2,
+    //                 BT_GATT_CHRC_READ,
+    //                 BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, /* No security enable */
+    //                 custom_char2_read_cb, NULL, NULL),
+    // // Custom char3
     BT_GATT_CHARACTERISTIC(BT_UUID_CUSTOM_CHAR3,
                     BT_GATT_CHRC_READ | BT_GATT_CHRC_INDICATE,
                     BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, /* No security enable */
                     custom_char3_read_cb, NULL, NULL),          
     BT_GATT_CCC(custom_char3_notify_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
-    // Custom char4
-    BT_GATT_CHARACTERISTIC(BT_UUID_CUSTOM_CHAR4,
-                    BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
-                    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, /* No security enable */
-                    custom_char4_read_cb, NULL, NULL),
-    BT_GATT_CCC(custom_char4_notify_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
-    // Custom char5
-    BT_GATT_CHARACTERISTIC(BT_UUID_CUSTOM_CHAR5,
-                    BT_GATT_CHRC_WRITE,
-                    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, /* No security enable */
-                    NULL, custom_char5_write_cb, NULL),
+//     // Custom char4
+//     BT_GATT_CHARACTERISTIC(BT_UUID_CUSTOM_CHAR4,
+//                     BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
+//                     BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, /* No security enable */
+//                     custom_char4_read_cb, NULL, NULL),
+//     BT_GATT_CCC(custom_char4_notify_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+//     // Custom char5
+//     BT_GATT_CHARACTERISTIC(BT_UUID_CUSTOM_CHAR5,
+//                     BT_GATT_CHRC_WRITE,
+//                     BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, /* No security enable */
+//                     NULL, custom_char5_write_cb, NULL),
 );

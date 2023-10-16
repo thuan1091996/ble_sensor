@@ -90,8 +90,8 @@ static void MTU_exchange_cb(struct bt_conn *conn, uint8_t err, struct bt_gatt_ex
 {
 	if (!err) 
     {
-		LOG_WRN("MTU exchange done. "); 
-        LOG_WRN("MTU: %d", bt_gatt_get_mtu(current_conn) - 3);
+		LOG_INF("MTU exchange done. "); 
+        LOG_INF("MTU: %d", bt_gatt_get_mtu(current_conn) - 3);
 	} else 
     {
 		LOG_ERR("MTU exchange failed (err %" PRIu8 ")", err);
@@ -106,7 +106,7 @@ static void request_mtu_exchange(void)
 	err = bt_gatt_exchange_mtu(current_conn, &exchange_params);
 	if (err)
     {
-		LOG_WRN("MTU exchange failed (err %d)", err);
+		LOG_ERR("MTU exchange failed (err %d)", err);
 	}  else 
     {
 		LOG_INF("MTU exchange pending");
@@ -163,21 +163,21 @@ static void on_ble_disconnect(struct bt_conn *conn, uint8_t reason)
 
 void on_ble_param_updated(struct bt_conn *conn, uint16_t interval, uint16_t latency, uint16_t timeout)
 {
-    LOG_WRN("BLE param updated");
+    LOG_INF("BLE param updated");
     // Dump all params
-    LOG_WRN("BLE interval: %.02f ms", (float)interval * 1.25);
-    LOG_WRN("BLE timeout: %.02f ms", (float)timeout * 10);
-    LOG_WRN("BLE latency: %d", latency);
+    LOG_INF("BLE interval: %.02f ms", (float)interval * 1.25);
+    LOG_INF("BLE timeout: %.02f ms", (float)timeout * 10);
+    LOG_INF("BLE latency: %d", latency);
 }
 
 void on_ble_data_len_updated(struct bt_conn *conn, struct bt_conn_le_data_len_info *info)
 {
-    LOG_WRN("BLE data len updated");
+    LOG_INF("BLE data len updated");
     // Dump all params
-    LOG_WRN("BLE tx_max_len: %dB", info->tx_max_len);
-    LOG_WRN("BLE tx_max_time: %d (us)", info->tx_max_time);
-    LOG_WRN("BLE rx_max_len: %dB", info->rx_max_len);
-    LOG_WRN("BLE rx_max_time: %d (us)", info->rx_max_time);
+    LOG_INF("BLE tx_max_len: %dB", info->tx_max_len);
+    LOG_INF("BLE tx_max_time: %d (us)", info->tx_max_time);
+    LOG_INF("BLE rx_max_len: %dB", info->rx_max_len);
+    LOG_INF("BLE rx_max_time: %d (us)", info->rx_max_time);
 }
 
 /******************************************************************************
@@ -187,7 +187,7 @@ int ble_adv_start(void)
 {
     if(ble_is_advertising())
     {
-        LOG_INF("Advertising already started\n");
+        LOG_WRN("Advertising already started\n");
         return 0;
     }
 	int errorcode = bt_le_adv_start(BT_LE_ADV_CONN, ADV_DATA, ARRAY_SIZE(ADV_DATA), NULL, 0);
@@ -208,7 +208,7 @@ int ble_adv_stop(void)
 {
     if(!ble_is_advertising())
     {
-        LOG_INF("Advertising already stopped\n");
+        LOG_WRN("Advertising already stopped\n");
         return 0;
     }
     int errorcode = bt_le_adv_stop();
