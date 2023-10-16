@@ -37,11 +37,11 @@ LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 #define ADV_DEFAULT_DEVICE_NAME     CONFIG_BT_DEVICE_NAME
 #define ADV_CUSTOM_DATA_TYPE        BT_DATA_MANUFACTURER_DATA
 #define ADV_PACKET_MAX_LEN          (31)
-#define ADV_CUSTOM_PAYLOAD_LEN      (29) // Max length - 1B type - 1B length
+#define ADV_CUSTOM_PAYLOAD_LEN      (0) // Max length - 1B type - 1B length
 #define ADV_NAME_MAX_LEN            (ADV_PACKET_MAX_LEN - (ADV_CUSTOM_PAYLOAD_LEN + 2) - 2)
 
 
-#define CONF_ADV_NAME_APPEND_MAC_ADDR   (0) // 1: include mac address in adv name, 0: not include
+#define CONF_ADV_NAME_APPEND_MAC_ADDR   (1) // 1: include mac address in adv name, 0: not include
 
 /******************************************************************************
 * Module Typedefs
@@ -53,17 +53,26 @@ LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 volatile static bool is_advertising=false;
 static struct bt_conn *current_conn;
 
+#if (ADV_NAME_MAX_LEN < 0)
+#warning "ADV_NAME_MAX_LEN should be greater than 0"
+#else /* !(ADV_NAME_MAX_LEN < 0) */
+static char ADV_NAME[ADV_NAME_MAX_LEN] = ADV_DEFAULT_DEVICE_NAME;
+#endif /* End of (ADV_NAME_MAX_LEN < 0) */
 
 uint8_t ADV_CUSTOM_PAYLOAD[ADV_CUSTOM_PAYLOAD_LEN] = {0};
 
 static struct bt_data ADV_DATA[] = 
 {
+    BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),                   /* General discoverable mode */
 #if (ADV_NAME_MAX_LEN < 0)
 #warning "ADV_NAME_MAX_LEN is negative"
 #else
-    BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME)-1),      /* Device name */
+    BT_DATA(BT_DATA_NAME_COMPLETE, ADV_NAME, sizeof(ADV_NAME)-1), /* Device name */
 #endif
+
+#if !(ADV_CUSTOM_PAYLOAD_LEN <= 0)
     BT_DATA(ADV_CUSTOM_DATA_TYPE, ADV_CUSTOM_PAYLOAD, ADV_CUSTOM_PAYLOAD_LEN)  /* Custom payload */
+#endif
 };
 
 /* Bluetooth applicatiton callbacks */
@@ -83,8 +92,7 @@ static void MTU_exchange_cb(struct bt_conn *conn, uint8_t err, struct bt_gatt_ex
     {
 		LOG_WRN("MTU exchange done. "); 
         LOG_WRN("MTU: %d", bt_gatt_get_mtu(current_conn) - 3);
-	} 
-    else 
+	} else 
     {
 		LOG_ERR("MTU exchange failed (err %" PRIu8 ")", err);
 	}
@@ -96,11 +104,10 @@ static void request_mtu_exchange(void)
 	exchange_params.func = MTU_exchange_cb;
 
 	err = bt_gatt_exchange_mtu(current_conn, &exchange_params);
-	if (err) 
+	if (err)
     {
 		LOG_WRN("MTU exchange failed (err %d)", err);
-	} 
-    else 
+	}  else 
     {
 		LOG_INF("MTU exchange pending");
 	}
@@ -135,6 +142,7 @@ static void on_ble_connect(struct bt_conn *conn, uint8_t err)
 	}
     current_conn= bt_conn_ref(conn); 
     LOG_INF("BLE Connected");
+    LOG_INF("Initializing data length update and MTU exchange");
 	request_mtu_exchange();
 	request_data_len_update();
 
