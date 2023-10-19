@@ -57,10 +57,33 @@ void on_ble_disconnect(void)
     is_ble_connect = false;
     LOG_INF("BLE disconnected");
 }
+
+int on_cmd_write_cb(void* p_data, void* p_len)
+{
+    // Dump receive data
+    LOG_INF("Command received, recv %dB", *(int*)p_len);
+    LOG_HEXDUMP_INF(p_data, *(int*)p_len, "raw_payload: ");
+    return 0;
+}
+
+void* on_cmd_read_cb(void* p_data, void* p_len)
+{
+    static char default_char_value[]="CMD CHAR READ CB TRIGGER";
+    *(int*)p_len = strlen(default_char_value);
+    return default_char_value;
+}
+
+
 ble_callback_t ble_callback = 
 {
     .ble_connected_cb = &on_ble_connect,
     .ble_disconnected_cb = &on_ble_disconnect,
+};
+
+ble_custom_gatt_cb_t ble_custom_gatt_cb = 
+{
+    .custom_char_read_cb = &on_cmd_read_cb,
+    .custom_char_write_cb = &on_cmd_write_cb,
 };
 /******************************************************************************
 * Function Prototypes
@@ -83,7 +106,7 @@ int ble_app_init(void)
         return -1;
     }
 
-    ble_custom_service_init(NULL);
+    ble_custom_service_init(&ble_custom_gatt_cb);
 
     if (ble_adv_start() != 0)
     {
@@ -115,7 +138,7 @@ int sensor_data_send_ble(uint8_t* p_data, uint16_t* p_length, uint32_t frame_cnt
 #if (SENSOR_DATA_SEND_BOARDCAST != 0)
     return ble_set_custom_adv_payload(send_payload, 1 + sizeof(frame_cnt) + input_len);
 #else /* !(SENSOR_DATA_SEND_BOARDCAST != 0) */
-    int send_status = char3_send_indication(send_payload, 1 + sizeof(frame_cnt) + input_len);
+    int send_status = sensor_char_send_indication(send_payload, 1 + sizeof(frame_cnt) + input_len);
     if(send_status != 0)
     {
         LOG_ERR("BLE send failed with status %d", send_status);
@@ -178,7 +201,7 @@ int main(void)
         {
             LOG_WRN("Sensor data length %d is invalid", sensor_data_len);
         }
-#else
+#else // (CONFIG_BOARD_XIAO_BLE != 1) 
         // Simulate sending sensor data
         for(uint8_t count=0; count< SENSOR_PACKET_LEN; count++)
         {
