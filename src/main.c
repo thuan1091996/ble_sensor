@@ -22,7 +22,7 @@
 *******************************************************************************/
 #define FW_MAJOR_VERSION                (0)
 #define FW_MINOR_VERSION                (0)
-#define FW_BUIILD_VERSION               (1)
+#define FW_BUIILD_VERSION               (2)
 
 #define SAMPLING_RATE_MS                (50)
 #define SENSOR_PACKET_LEN               (24) // 4B for each axis * 6 axis

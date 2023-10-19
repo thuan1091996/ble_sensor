@@ -14,13 +14,15 @@ This application is a BLE sensor application for the Zephyr RTOS. It is designed
 - Default accelerometer output data: 52 Hz
 - Default gyroscope output data: 52 Hz
 
-## BLE advertising packet
-|  | **Header** | **Frame Counter** | **ACL X** | **ACL Y** | **ACL Z** | **MAG X** | **MAG Y** | **MAG Z** |
-|  --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **Length** | 1 | 4 | 4 | 4 | 4 | 4 | 4 | 4 |
-|  |  |  |  |  |  |  |  |  |
+## BLE advertising name format
+IMUXXXXXXXXXXXX 
+  > with "XXXXXXXXXXXX" is the 6B device MAC address
 
-> **Header**: 0xAA\
+## BLE indication message format
+|  | **Frame Counter** | **ACL X** | **ACL Y** | **ACL Z** | **MAG X** | **MAG Y** | **MAG Z** |
+|  --- | --- | --- | --- | --- | --- | --- | --- |
+| **Length** | 4 | 4 | 4 | 4 | 4 | 4 | 4 |
+|  |  |  |  |  |  |  |  |
 > **Frame Counter**: 32-bit unsigned integer\
 > **ACL**: 32-bit float\
 > **MAG**: 32-bit float
