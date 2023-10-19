@@ -130,15 +130,19 @@ int sensor_data_send_ble(uint8_t* p_data, uint16_t* p_length, uint32_t frame_cnt
     __ASSERT_NO_MSG(p_data != NULL);
     __ASSERT_NO_MSG(p_length != NULL);
     uint16_t input_len = *p_length;
+#if (SENSOR_DATA_SEND_BOARDCAST != 0)
     uint8_t send_payload[1 + sizeof(frame_cnt) + input_len]; // 1B frame heaader + 4B frame count + 12B sensor data
     memset(send_payload, 0, sizeof(send_payload));
     send_payload[0] = SENSOR_DATA_HEADER;
     memcpy(send_payload + 1, &frame_cnt, sizeof(frame_cnt));
     memcpy(send_payload + 1 +sizeof(frame_cnt), p_data, input_len);
-#if (SENSOR_DATA_SEND_BOARDCAST != 0)
     return ble_set_custom_adv_payload(send_payload, 1 + sizeof(frame_cnt) + input_len);
 #else /* !(SENSOR_DATA_SEND_BOARDCAST != 0) */
-    int send_status = sensor_char_send_indication(send_payload, 1 + sizeof(frame_cnt) + input_len);
+    uint8_t send_payload[sizeof(frame_cnt) + input_len]; //4B frame count + 12B sensor data
+    memset(send_payload, 0, sizeof(send_payload));
+    memcpy(send_payload, &frame_cnt, sizeof(frame_cnt));
+    memcpy(send_payload +sizeof(frame_cnt), p_data, input_len);
+    int send_status = sensor_char_send_indication(send_payload, sizeof(frame_cnt) + input_len);
     if(send_status != 0)
     {
         LOG_ERR("BLE send failed with status %d", send_status);
