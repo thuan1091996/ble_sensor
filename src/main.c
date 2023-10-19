@@ -33,7 +33,7 @@
 *******************************************************************************/
 #include "zephyr/logging/log.h"
 #define MODULE_NAME			        main
-#define MODULE_LOG_LEVEL	        LOG_LEVEL_DBG
+#define MODULE_LOG_LEVEL	        LOG_LEVEL_INF
 LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 
 /******************************************************************************
@@ -43,7 +43,48 @@ LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 /******************************************************************************
 * Module Variable Definitions
 *******************************************************************************/
+volatile static bool is_ble_connect=false;
 
+void on_ble_connect(void)
+{
+    is_ble_connect = true;
+    LOG_INF("BLE connected");
+
+}
+
+void on_ble_disconnect(void)
+{
+    is_ble_connect = false;
+    LOG_INF("BLE disconnected");
+}
+
+int on_cmd_write_cb(void* p_data, void* p_len)
+{
+    // Dump receive data
+    LOG_INF("Command received, recv %dB", *(int*)p_len);
+    LOG_HEXDUMP_INF(p_data, *(int*)p_len, "raw_payload: ");
+    return 0;
+}
+
+void* on_cmd_read_cb(void* p_data, void* p_len)
+{
+    static char default_char_value[]="CMD CHAR READ CB TRIGGER";
+    *(int*)p_len = strlen(default_char_value);
+    return default_char_value;
+}
+
+
+ble_callback_t ble_callback = 
+{
+    .ble_connected_cb = &on_ble_connect,
+    .ble_disconnected_cb = &on_ble_disconnect,
+};
+
+ble_custom_gatt_cb_t ble_custom_gatt_cb = 
+{
+    .custom_char_read_cb = &on_cmd_read_cb,
+    .custom_char_write_cb = &on_cmd_write_cb,
+};
 /******************************************************************************
 * Function Prototypes
 *******************************************************************************/
@@ -59,11 +100,14 @@ int ble_app_init(void);
  */
 int ble_app_init(void)
 {
-    if(ble_init(NULL) != 0)
+    if(ble_init(&ble_callback) != 0)
     {
         LOG_ERR("BLE init failed");
         return -1;
     }
+
+    ble_custom_service_init(&ble_custom_gatt_cb);
+
     if (ble_adv_start() != 0)
     {
         LOG_ERR("BLE adv start failed");
@@ -85,11 +129,24 @@ int sensor_data_send_ble(uint8_t* p_data, uint16_t* p_length, uint32_t frame_cnt
 {
     __ASSERT_NO_MSG(p_data != NULL);
     __ASSERT_NO_MSG(p_length != NULL);
-    uint8_t send_payload[sizeof(frame_cnt) + SENSOR_PACKET_LEN + 1] = {0}; // 1B frame heaader + 4B frame count + 12B sensor data
+    uint16_t input_len = *p_length;
+    uint8_t send_payload[1 + sizeof(frame_cnt) + input_len]; // 1B frame heaader + 4B frame count + 12B sensor data
+    memset(send_payload, 0, sizeof(send_payload));
     send_payload[0] = SENSOR_DATA_HEADER;
     memcpy(send_payload + 1, &frame_cnt, sizeof(frame_cnt));
-    memcpy(send_payload + 1 +sizeof(frame_cnt), p_data, *p_length);
-    return ble_set_custom_adv_payload(send_payload, 1 + sizeof(frame_cnt) + *p_length);
+    memcpy(send_payload + 1 +sizeof(frame_cnt), p_data, input_len);
+#if (SENSOR_DATA_SEND_BOARDCAST != 0)
+    return ble_set_custom_adv_payload(send_payload, 1 + sizeof(frame_cnt) + input_len);
+#else /* !(SENSOR_DATA_SEND_BOARDCAST != 0) */
+    int send_status = sensor_char_send_indication(send_payload, 1 + sizeof(frame_cnt) + input_len);
+    if(send_status != 0)
+    {
+        LOG_ERR("BLE send failed with status %d", send_status);
+        return send_status;
+    }
+    return 0;
+#endif /* End of (SENSOR_DATA_SEND_BOARDCAST != 0) */
+    
 }
 
 int main(void)
@@ -111,11 +168,18 @@ int main(void)
 #endif /* End of (CONFIG_BOARD_XIAO_BLE == 1)  */
     while(1)
     {
-#if (CONFIG_BOARD_XIAO_BLE == 1) 
+        if(is_ble_connect == false)
+        {
+            k_sleep(K_MSEC(1000));
+            LOG_WRN("Waiting for BLE connection");
+            continue;
+        }
         static uint32_t frame_cnt = 0;
         frame_cnt++;
         uint8_t sensor_data[50] = {0};
         uint16_t sensor_data_len = 0;
+#if (CONFIG_BOARD_XIAO_BLE == 1) 
+
         if (sensor_sampling(sensor_data, &sensor_data_len) != 0)
         {
             LOG_ERR("Sensor sampling failed");
@@ -129,13 +193,28 @@ int main(void)
             else
             {
                 LOG_INF("Frame %d sent", frame_cnt);
-                printk("Accel (m/s^2): %.02f, %.02f, %.02f \r\n", *(float*)sensor_data, *(float*)(sensor_data + 4), *(float*)(sensor_data + 8));
-                printk("Gyro (radians/s): %.02f, %.02f, %.02f \r\n", *(float*)(sensor_data + 12), *(float*)(sensor_data + 16), *(float*)(sensor_data + 20));
+                LOG_DBG("Accel (m/s^2): %.02f, %.02f, %.02f \r\n", *(float*)sensor_data, *(float*)(sensor_data + 4), *(float*)(sensor_data + 8));
+                LOG_DBG("Gyro (radians/s): %.02f, %.02f, %.02f \r\n", *(float*)(sensor_data + 12), *(float*)(sensor_data + 16), *(float*)(sensor_data + 20));
             }
         }
         else
         {
             LOG_WRN("Sensor data length %d is invalid", sensor_data_len);
+        }
+#else // (CONFIG_BOARD_XIAO_BLE != 1) 
+        // Simulate sending sensor data
+        for(uint8_t count=0; count< SENSOR_PACKET_LEN; count++)
+        {
+            sensor_data[count] = count;
+        }
+        sensor_data_len = SENSOR_PACKET_LEN;
+        if (sensor_data_send_ble(sensor_data, &sensor_data_len, frame_cnt) != 0)
+        {
+            LOG_ERR("Sensor data send BLE failed");
+        }
+        else
+        {
+            LOG_INF("Frame %d sent", frame_cnt);
         }
 #endif /* End of (CONFIG_BOARD_XIAO_BLE == 1)  */
         k_sleep(K_MSEC(SAMPLING_RATE_MS));
