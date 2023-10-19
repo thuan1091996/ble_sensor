@@ -264,7 +264,9 @@ int ble_init(ble_callback_t* p_app_cb)
     // Get the BLE address base on NRF_FICR->DEVICEADDR
     char adv_device_name[ADV_NAME_MAX_LEN] = {0};
     // Append 4 last digits of mac address to device name 
-    sprintf(adv_device_name, "%s%02X%02X", ADV_DEFAULT_DEVICE_NAME, 
+    sprintf(adv_device_name, "%s%02X%02X%02X%02X%02X%02X", ADV_DEFAULT_DEVICE_NAME,
+                    (uint8_t)( (NRF_FICR->DEVICEADDR[1] >> 8) & 0xFF), (uint8_t)(NRF_FICR->DEVICEADDR[1] & 0xFF),
+                    (uint8_t)( (NRF_FICR->DEVICEADDR[0] >> 24) & 0xFF), (uint8_t)( (NRF_FICR->DEVICEADDR[0] >> 16) & 0xFF),
                     (uint8_t)( (NRF_FICR->DEVICEADDR[0] >> 8) & 0xFF), (uint8_t)(NRF_FICR->DEVICEADDR[0] & 0xFF));
     ble_set_adv_name(adv_device_name);
 #endif // End of CONF_ADV_NAME_APPEND_MAC_ADDR
