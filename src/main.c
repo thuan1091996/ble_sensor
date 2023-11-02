@@ -49,13 +49,20 @@ void on_ble_connect(void)
 {
     is_ble_connect = true;
     LOG_INF("BLE connected");
-
+    if (ble_adv_stop() != 0)
+    {
+        LOG_ERR("BLE adv stop failed");
+    }
 }
 
 void on_ble_disconnect(void)
 {
     is_ble_connect = false;
     LOG_INF("BLE disconnected");
+    if(ble_adv_start() != 0)
+    {
+        LOG_ERR("BLE adv start failed");
+    }
 }
 
 int on_cmd_write_cb(void* p_data, void* p_len)
