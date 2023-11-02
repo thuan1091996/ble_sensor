@@ -150,6 +150,16 @@ static void on_ble_connect(struct bt_conn *conn, uint8_t err)
     {
         ble_cb_app.ble_connected_cb();
     }
+
+    struct bt_conn_info info;
+    err = bt_conn_get_info(conn, &info);
+    if (err) {
+        LOG_ERR("bt_conn_get_info() returned %d", err);
+        return;
+    }
+    double connection_interval = info.le.interval*1.25; // in ms
+    uint16_t supervision_timeout = info.le.timeout*10; // in ms
+    LOG_INF("Connection parameters: interval %.2f ms, latency %d intervals, timeout %d ms", connection_interval, info.le.latency, supervision_timeout);
 }
 
 static void on_ble_disconnect(struct bt_conn *conn, uint8_t reason)

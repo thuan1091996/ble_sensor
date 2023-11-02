@@ -30,7 +30,7 @@
 *******************************************************************************/
 #include <zephyr/logging/log.h>
 #define MODULE_NAME			        gatt_sensor
-#define MODULE_LOG_LEVEL	        LOG_LEVEL_INF
+#define MODULE_LOG_LEVEL	        LOG_LEVEL_WRN
 LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 /******************************************************************************
 * Module Preprocessor Macros
