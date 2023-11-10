@@ -11,8 +11,8 @@ This application is a BLE sensor application for the Zephyr RTOS. It is designed
 ## Default sensor configuration
 - Default accelerometer full-scale range: +/- 4g
 - Default gyroscope full-scale range: +/- 500 dps
-- Default accelerometer output data: 52 Hz
-- Default gyroscope output data: 52 Hz
+- Default accelerometer output data: 104 Hz
+- Default gyroscope output data: 104 Hz
 
 ## BLE advertising name format
 IMUXXXXXXXXXXXX 

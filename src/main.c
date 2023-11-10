@@ -24,7 +24,7 @@
 #define FW_MINOR_VERSION                (0)
 #define FW_BUIILD_VERSION               (3)
 
-#define SAMPLING_RATE_MS                (50)
+#define SAMPLING_RATE_MS                (25)
 #define SENSOR_PACKET_LEN               (24) // 4B for each axis * 6 axis
 #define SENSOR_DATA_HEADER              (0xAA)
 
