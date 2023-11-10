@@ -8,3 +8,8 @@
 - Sensor data is sent via indication messages
 - Including device MAC address in advertising field "IMUXXXXXXXXXXXX"
 - Reserved "COMMAND characteristic"
+
+## Version 0.0.3 (Nov 10, 2023)
+- Fix BLE advertising after connection
+- Enable auto trigger connection parameter update
+- Enable power management

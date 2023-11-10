@@ -22,7 +22,7 @@
 *******************************************************************************/
 #define FW_MAJOR_VERSION                (0)
 #define FW_MINOR_VERSION                (0)
-#define FW_BUIILD_VERSION               (2)
+#define FW_BUIILD_VERSION               (3)
 
 #define SAMPLING_RATE_MS                (50)
 #define SENSOR_PACKET_LEN               (24) // 4B for each axis * 6 axis
@@ -33,7 +33,7 @@
 *******************************************************************************/
 #include "zephyr/logging/log.h"
 #define MODULE_NAME			        main
-#define MODULE_LOG_LEVEL	        LOG_LEVEL_INF
+#define MODULE_LOG_LEVEL	        LOG_LEVEL_WRN
 LOG_MODULE_REGISTER(MODULE_NAME, MODULE_LOG_LEVEL);
 
 /******************************************************************************
@@ -163,7 +163,6 @@ int sensor_data_send_ble(uint8_t* p_data, uint16_t* p_length, uint32_t frame_cnt
 int main(void)
 {
     LOG_INF("Firmware version: %d.%d.%d", FW_MAJOR_VERSION, FW_MINOR_VERSION, FW_BUIILD_VERSION);
-    k_sleep(K_MSEC(2000));
 	if (ble_app_init() != 0)
     {
         LOG_ERR("App BLE init failed");
